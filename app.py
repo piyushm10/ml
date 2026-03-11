@@ -6,10 +6,7 @@ st.title("CGM Glucose Visualization")
 
 # load dataset
 
-df = pd.concat([
-    pd.read_pickle("patient_559.pkl"),
-    pd.read_pickle("patient_563.pkl")
-])
+df = pd.read_pickle("patient_563.pkl")
 
 df["timestamp"] = pd.to_datetime(df["timestamp"])
 
