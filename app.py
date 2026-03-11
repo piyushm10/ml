@@ -82,7 +82,7 @@ for attr in continuous_attrs:
     pdf[attr] = pd.to_numeric(pdf[attr], errors="coerce")
 
 # -------------------------
-# Color palette for features
+# Attribute color palette
 # -------------------------
 feature_colors = [
     "#1f77b4","#ff7f0e","#2ca02c","#d62728",
@@ -95,15 +95,14 @@ feature_colors = [
 # -------------------------
 fig = go.Figure()
 
-# Glucose trace
+# Glucose line
 fig.add_trace(go.Scatter(
     x=pdf["timestamp"],
     y=pdf["glucose_level"],
     mode="lines+markers",
     name="Glucose",
     line=dict(width=3, color="black"),
-    marker=dict(size=4),
-    yaxis="y1"
+    marker=dict(size=4)
 ))
 
 # Continuous attributes
@@ -122,28 +121,23 @@ for i, attr in enumerate(selected_features):
     ))
 
 # -------------------------
-# Event markers
+# Event markers ON glucose curve
 # -------------------------
-shapes = []
-
 for event in selected_events:
 
     events = pdf[pdf[event].notna()]
 
-    for _, r in events.iterrows():
-
-        shapes.append(dict(
-            type="line",
-            x0=r["timestamp"],
-            x1=r["timestamp"],
-            y0=0,
-            y1=r["glucose_level"],
-            line=dict(
-                color=event_colors[event],
-                dash="dot",
-                width=2
-            )
-        ))
+    fig.add_trace(go.Scatter(
+        x=events["timestamp"],
+        y=events["glucose_level"],
+        mode="markers",
+        name=event,
+        marker=dict(
+            size=12,
+            color=event_colors[event],
+            symbol="diamond"
+        )
+    ))
 
 # -------------------------
 # Layout
@@ -169,7 +163,6 @@ fig.update_layout(
         showgrid=False
     ),
 
-    shapes=shapes,
     template="plotly_white",
     height=700
 )
