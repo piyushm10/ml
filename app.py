@@ -2,27 +2,20 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-# must be first streamlit command
 st.set_page_config(layout="wide")
-
 st.title("CGM Glucose Visualization")
 
 # -------------------------
 # Load dataset
 # -------------------------
 df = pd.read_pickle("patient_563.pkl")
-
 df["timestamp"] = pd.to_datetime(df["timestamp"])
 
 # -------------------------
 # Patient dropdown
 # -------------------------
 patients = sorted(df["patient_id"].unique())
-
-patient_id = st.selectbox(
-    "Select Patient",
-    patients
-)
+patient_id = st.selectbox("Select Patient", patients)
 
 pdf = df[df["patient_id"] == patient_id].copy()
 
@@ -30,11 +23,7 @@ pdf = df[df["patient_id"] == patient_id].copy()
 # Date selector
 # -------------------------
 available_dates = sorted(pdf["timestamp"].dt.date.unique())
-
-selected_date = st.selectbox(
-    "Select Date",
-    available_dates
-)
+selected_date = st.selectbox("Select Date", available_dates)
 
 pdf = pdf[pdf["timestamp"].dt.date == selected_date]
 
@@ -86,13 +75,20 @@ selected_events = st.multiselect(
     event_attrs
 )
 
-# -------------------------
-# Ensure numeric columns
-# -------------------------
+# ensure numeric columns
 pdf["glucose_level"] = pd.to_numeric(pdf["glucose_level"], errors="coerce")
 
 for attr in continuous_attrs:
     pdf[attr] = pd.to_numeric(pdf[attr], errors="coerce")
+
+# -------------------------
+# Color palette for features
+# -------------------------
+feature_colors = [
+    "#1f77b4","#ff7f0e","#2ca02c","#d62728",
+    "#9467bd","#8c564b","#e377c2","#7f7f7f",
+    "#bcbd22","#17becf"
+]
 
 # -------------------------
 # Plot
@@ -104,23 +100,24 @@ fig.add_trace(go.Scatter(
     x=pdf["timestamp"],
     y=pdf["glucose_level"],
     mode="lines+markers",
-    connectgaps=True,
-    line=dict(width=2),
-    marker=dict(size=4),
     name="Glucose",
+    line=dict(width=3, color="black"),
+    marker=dict(size=4),
     yaxis="y1"
 ))
 
-# Selected continuous attributes
-for attr in selected_features:
+# Continuous attributes
+for i, attr in enumerate(selected_features):
+
+    color = feature_colors[i % len(feature_colors)]
+
     fig.add_trace(go.Scatter(
         x=pdf["timestamp"],
         y=pdf[attr],
         mode="lines+markers",
-        connectgaps=True,
-        line=dict(width=2),
-        marker=dict(size=4),
         name=attr,
+        line=dict(width=2, color=color),
+        marker=dict(size=4, color=color),
         yaxis="y2"
     ))
 
@@ -157,18 +154,7 @@ fig.update_layout(
 
     xaxis=dict(
         title="Timestamp",
-        type="date",
-        rangeslider=dict(visible=True),
-        rangeselector=dict(
-            buttons=[
-                dict(count=1, label="1h", step="hour", stepmode="backward"),
-                dict(count=6, label="6h", step="hour", stepmode="backward"),
-                dict(count=12, label="12h", step="hour", stepmode="backward"),
-                dict(count=1, label="1d", step="day", stepmode="backward"),
-                dict(count=7, label="7d", step="day", stepmode="backward"),
-                dict(step="all")
-            ]
-        )
+        type="date"
     ),
 
     yaxis=dict(
@@ -184,7 +170,6 @@ fig.update_layout(
     ),
 
     shapes=shapes,
-
     template="plotly_white",
     height=700
 )
