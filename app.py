@@ -5,7 +5,15 @@ import plotly.graph_objects as go
 st.title("CGM Glucose Visualization")
 
 # load dataset
-df = pd.read_pickle("all_combined.pkl")
+
+df = pd.concat([
+    pd.read_pickle("patient_559.pkl"),
+    pd.read_pickle("patient_563.pkl"),
+    pd.read_pickle("patient_570.pkl"),
+    pd.read_pickle("patient_575.pkl"),
+    pd.read_pickle("patient_588.pkl"),
+    pd.read_pickle("patient_591.pkl")
+])
 
 df["timestamp"] = pd.to_datetime(df["timestamp"])
 
