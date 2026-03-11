@@ -61,6 +61,19 @@ event_attrs = [
 ]
 
 # -------------------------
+# Event colors
+# -------------------------
+event_colors = {
+    "meal_type": "red",
+    "exercise_intensity": "green",
+    "hypo_event": "purple",
+    "finger_stick": "orange",
+    "bolus_dose": "blue",
+    "basal": "brown",
+    "temp_basal": "pink"
+}
+
+# -------------------------
 # Feature selection
 # -------------------------
 selected_features = st.multiselect(
@@ -128,7 +141,11 @@ for event in selected_events:
             x1=r["timestamp"],
             y0=0,
             y1=r["glucose_level"],
-            line=dict(color="red", dash="dot", width=2)
+            line=dict(
+                color=event_colors[event],
+                dash="dot",
+                width=2
+            )
         ))
 
 # -------------------------
@@ -172,7 +189,4 @@ fig.update_layout(
     height=700
 )
 
-# -------------------------
-# Display plot
-# -------------------------
 st.plotly_chart(fig, use_container_width=True)
