@@ -2,10 +2,14 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
+# must be first streamlit command
+st.set_page_config(layout="wide")
+
 st.title("CGM Glucose Visualization")
 
-# load dataset
-
+# -------------------------
+# Load dataset
+# -------------------------
 df = pd.read_pickle("patient_563.pkl")
 
 df["timestamp"] = pd.to_datetime(df["timestamp"])
@@ -21,6 +25,18 @@ patient_id = st.selectbox(
 )
 
 pdf = df[df["patient_id"] == patient_id].copy()
+
+# -------------------------
+# Date selector
+# -------------------------
+available_dates = sorted(pdf["timestamp"].dt.date.unique())
+
+selected_date = st.selectbox(
+    "Select Date",
+    available_dates
+)
+
+pdf = pdf[pdf["timestamp"].dt.date == selected_date]
 
 # -------------------------
 # Feature lists
@@ -57,7 +73,9 @@ selected_events = st.multiselect(
     event_attrs
 )
 
-# ensure numeric columns
+# -------------------------
+# Ensure numeric columns
+# -------------------------
 pdf["glucose_level"] = pd.to_numeric(pdf["glucose_level"], errors="coerce")
 
 for attr in continuous_attrs:
@@ -93,7 +111,9 @@ for attr in selected_features:
         yaxis="y2"
     ))
 
+# -------------------------
 # Event markers
+# -------------------------
 shapes = []
 
 for event in selected_events:
@@ -149,7 +169,10 @@ fig.update_layout(
     shapes=shapes,
 
     template="plotly_white",
-    height=650
+    height=700
 )
 
+# -------------------------
+# Display plot
+# -------------------------
 st.plotly_chart(fig, use_container_width=True)
