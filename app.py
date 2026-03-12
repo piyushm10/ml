@@ -2,6 +2,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+st.set_page_config(layout="wide")
 
 @st.cache_data
 def load_data():
@@ -9,8 +10,6 @@ def load_data():
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     return df
 
-
-# load dataset only once
 df = load_data()
 
 patient_id = "591"
@@ -46,27 +45,28 @@ pdf["glucose_level"] = pd.to_numeric(pdf["glucose_level"], errors="coerce")
 for attr in continuous_attrs:
     pdf[attr] = pd.to_numeric(pdf[attr], errors="coerce")
 
+unique_dates = sorted(pdf["timestamp"].dt.date.unique())
+
 fig = go.Figure()
 
-fig.add_trace(go.Scatter(
+# Glucose trace
+fig.add_trace(go.Scattergl(
     x=pdf["timestamp"],
     y=pdf["glucose_level"],
-    mode="lines+markers",
+    mode="lines",
     connectgaps=True,
-    line=dict(width=2),
-    marker=dict(size=4),
-    name="Glucose",
-    yaxis="y1"
+    line=dict(width=2, color="blue"),
+    name="Glucose"
 ))
 
+# Continuous attributes
 for attr in continuous_attrs:
-    fig.add_trace(go.Scatter(
+    fig.add_trace(go.Scattergl(
         x=pdf["timestamp"],
         y=pdf[attr],
-        mode="lines+markers",
+        mode="lines",
         connectgaps=True,
         line=dict(width=2),
-        marker=dict(size=4),
         name=attr,
         visible=False,
         yaxis="y2"
@@ -77,7 +77,7 @@ buttons = []
 buttons.append(dict(
     label="None",
     method="update",
-    args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": [], "annotations": []}]
+    args=[{"visible":[True]+[False]*len(continuous_attrs)}]
 ))
 
 for i, attr in enumerate(continuous_attrs):
@@ -88,75 +88,61 @@ for i, attr in enumerate(continuous_attrs):
     buttons.append(dict(
         label=attr,
         method="update",
-        args=[{"visible": vis}, {"shapes": [], "annotations": []}]
+        args=[{"visible": vis}]
     ))
 
+# Event markers
 for event in event_attrs:
-
-    shapes = []
-    annotations = []
 
     events = pdf[pdf[event].notna()]
 
+    xs = []
+    ys = []
+    labels = []
+    colors = []
+
     for _, r in events.iterrows():
 
-        date_index = list(sorted(pdf["timestamp"].dt.date.unique())).index(r["timestamp"].date())
+        date_index = unique_dates.index(r["timestamp"].date())
         color = date_colors[date_index % len(date_colors)]
 
         if event == "meal_type":
             label = f"{r['meal_type']} ({r['meal_carbs']}g)"
-
         elif event == "bolus_dose":
             label = f"bolus {r['bolus_dose']}"
-
         elif event == "exercise_intensity":
             label = f"exercise {r['exercise_intensity']}"
-
         elif event == "finger_stick":
             label = f"finger {r['finger_stick']}"
-
         elif event == "basal":
             label = f"basal {r['basal']}"
-
         elif event == "temp_basal":
             label = f"temp basal {r['temp_basal']}"
-
         elif event == "hypo_event":
             label = "hypo"
-
         else:
             label = event
 
-        shapes.append(dict(
-            type="line",
-            x0=r["timestamp"],
-            x1=r["timestamp"],
-            y0=0,
-            y1=r["glucose_level"],
-            line=dict(color=color, dash="dot", width=2)
-        ))
+        xs.append(r["timestamp"])
+        ys.append(r["glucose_level"])
+        labels.append(label)
+        colors.append(color)
 
-        annotations.append(dict(
-            x=r["timestamp"],
-            y=0,
-            text=label,
-            showarrow=False,
-            textangle=90,
-            yshift=-10,
-            font=dict(size=10, color=color)
-        ))
-
-    buttons.append(dict(
-        label=event,
-        method="update",
-        args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": shapes, "annotations": annotations}]
+    fig.add_trace(go.Scattergl(
+        x=xs,
+        y=ys,
+        mode="markers",
+        marker=dict(size=8, color=colors),
+        text=labels,
+        hovertemplate="%{text}<extra></extra>",
+        name=event,
+        visible=False
     ))
-
-unique_dates = sorted(pdf["timestamp"].dt.date.unique())
 
 date_buttons = []
 
 for d in unique_dates:
+
     start = pd.Timestamp(d)
     end = start + pd.Timedelta(days=1)
 
@@ -221,4 +207,4 @@ fig.update_layout(
     height=650
 )
 
-fig.show()
+st.plotly_chart(fig, use_container_width=True)
