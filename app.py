@@ -1,6 +1,9 @@
 import pandas as pd
 import plotly.graph_objects as go
 
+# LOAD DATASET
+df = pd.read_pickle("patient_591.pkl")
+
 patient_id = "591"
 
 pdf = df[df["patient_id"] == patient_id].copy()
@@ -25,20 +28,18 @@ event_attrs = [
     "temp_basal"
 ]
 
-# colors for different dates
 date_colors = [
     "red","green","blue","orange","purple",
     "brown","pink","cyan","magenta","yellow"
 ]
 
-# ensure numeric columns
 pdf["glucose_level"] = pd.to_numeric(pdf["glucose_level"], errors="coerce")
+
 for attr in continuous_attrs:
     pdf[attr] = pd.to_numeric(pdf[attr], errors="coerce")
 
 fig = go.Figure()
 
-# Glucose trace
 fig.add_trace(go.Scatter(
     x=pdf["timestamp"],
     y=pdf["glucose_level"],
@@ -50,7 +51,6 @@ fig.add_trace(go.Scatter(
     yaxis="y1"
 ))
 
-# Continuous attributes
 for attr in continuous_attrs:
     fig.add_trace(go.Scatter(
         x=pdf["timestamp"],
@@ -72,7 +72,6 @@ buttons.append(dict(
     args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": [], "annotations": []}]
 ))
 
-# Continuous attribute dropdown
 for i, attr in enumerate(continuous_attrs):
 
     vis = [True] + [False]*len(continuous_attrs)
@@ -84,7 +83,6 @@ for i, attr in enumerate(continuous_attrs):
         args=[{"visible": vis}, {"shapes": [], "annotations": []}]
     ))
 
-# Event dropdown
 for event in event_attrs:
 
     shapes = []
@@ -97,7 +95,6 @@ for event in event_attrs:
         date_index = list(sorted(pdf["timestamp"].dt.date.unique())).index(r["timestamp"].date())
         color = date_colors[date_index % len(date_colors)]
 
-        # event value labels
         if event == "meal_type":
             label = f"{r['meal_type']} ({r['meal_carbs']}g)"
 
@@ -147,7 +144,6 @@ for event in event_attrs:
         args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": shapes, "annotations": annotations}]
     ))
 
-# Date dropdown
 unique_dates = sorted(pdf["timestamp"].dt.date.unique())
 
 date_buttons = []
