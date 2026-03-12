@@ -89,7 +89,7 @@ for attr in continuous_attrs:
 # -------------------------
 fig = go.Figure()
 
-# glucose line
+# Glucose line
 fig.add_trace(go.Scatter(
     x=df_full["timestamp"],
     y=df_full["glucose_level"],
@@ -99,7 +99,7 @@ fig.add_trace(go.Scatter(
     connectgaps=True
 ))
 
-# continuous attributes
+# Continuous attributes
 for i, attr in enumerate(selected_features):
 
     color = feature_colors[i % len(feature_colors)]
@@ -165,7 +165,7 @@ for event in selected_events:
             font=dict(size=10, color=event_colors[event])
         ))
 
-# legend entries
+# Legend entries
 for event, color in event_colors.items():
     if event in selected_events:
         fig.add_trace(go.Scatter(
@@ -197,6 +197,11 @@ fig.update_layout(
                 dict(count=7, label="7d", step="day", stepmode="backward"),
                 dict(step="all", label="Full Range")
             ]
+        ),
+
+        rangeslider=dict(
+            visible=True,
+            thickness=0.08
         )
     ),
 
