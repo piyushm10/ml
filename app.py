@@ -6,19 +6,6 @@ patient_id = "591"
 pdf = df[df["patient_id"] == patient_id].copy()
 pdf["timestamp"] = pd.to_datetime(pdf["timestamp"])
 
-# -------------------------
-# Date selector
-# -------------------------
-unique_dates = sorted(pdf["timestamp"].dt.date.unique())
-
-selected_date = unique_dates[0]   # default date
-
-start = pd.Timestamp(selected_date)
-end = start + pd.Timedelta(days=1)
-
-# -------------------------
-# Attributes
-# -------------------------
 continuous_attrs = [
     "basis_heart_rate",
     "basis_steps",
@@ -38,34 +25,32 @@ event_attrs = [
     "temp_basal"
 ]
 
+# colors for events
 event_colors = {
-    "meal_type":"red",
-    "exercise_intensity":"green",
-    "hypo_event":"purple",
-    "finger_stick":"orange",
-    "bolus_dose":"blue",
-    "basal":"brown",
-    "temp_basal":"pink"
+    "meal_type": "red",
+    "exercise_intensity": "green",
+    "hypo_event": "purple",
+    "finger_stick": "orange",
+    "bolus_dose": "blue",
+    "basal": "brown",
+    "temp_basal": "pink"
 }
 
-# ensure numeric
+# ensure numeric columns
 pdf["glucose_level"] = pd.to_numeric(pdf["glucose_level"], errors="coerce")
-
 for attr in continuous_attrs:
     pdf[attr] = pd.to_numeric(pdf[attr], errors="coerce")
 
-# -------------------------
-# Plot
-# -------------------------
 fig = go.Figure()
 
 # Glucose trace
 fig.add_trace(go.Scatter(
     x=pdf["timestamp"],
     y=pdf["glucose_level"],
-    mode="lines",
+    mode="lines+markers",
     connectgaps=True,
-    line=dict(width=3,color="#1f77b4"),
+    line=dict(width=2, color="#1f77b4"),
+    marker=dict(size=4),
     name="Glucose",
     yaxis="y1"
 ))
@@ -75,9 +60,10 @@ for attr in continuous_attrs:
     fig.add_trace(go.Scatter(
         x=pdf["timestamp"],
         y=pdf[attr],
-        mode="lines",
+        mode="lines+markers",
         connectgaps=True,
         line=dict(width=2),
+        marker=dict(size=4),
         name=attr,
         visible=False,
         yaxis="y2"
@@ -89,10 +75,10 @@ buttons = []
 buttons.append(dict(
     label="None",
     method="update",
-    args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": [],"annotations":[]}]
+    args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": [], "annotations": []}]
 ))
 
-# Continuous dropdown
+# Continuous attribute dropdown
 for i, attr in enumerate(continuous_attrs):
 
     vis = [True] + [False]*len(continuous_attrs)
@@ -101,7 +87,7 @@ for i, attr in enumerate(continuous_attrs):
     buttons.append(dict(
         label=attr,
         method="update",
-        args=[{"visible": vis}, {"shapes": [],"annotations":[]}]
+        args=[{"visible": vis}, {"shapes": [], "annotations": []}]
     ))
 
 # Event dropdown
@@ -114,6 +100,7 @@ for event in event_attrs:
 
     for _, r in events.iterrows():
 
+        # event label values
         if event == "meal_type":
             label = f"{r['meal_type']} ({r['meal_carbs']}g)"
 
@@ -154,20 +141,21 @@ for event in event_attrs:
             showarrow=False,
             textangle=90,
             yshift=-10,
-            font=dict(size=10,color=event_colors[event])
+            font=dict(size=10, color=event_colors[event])
         ))
 
     buttons.append(dict(
         label=event,
         method="update",
-        args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": shapes,"annotations":annotations}]
+        args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": shapes, "annotations": annotations}]
     ))
 
 # Date dropdown
+unique_dates = sorted(pdf["timestamp"].dt.date.unique())
+
 date_buttons = []
 
 for d in unique_dates:
-
     start = pd.Timestamp(d)
     end = start + pd.Timedelta(days=1)
 
@@ -177,9 +165,6 @@ for d in unique_dates:
         args=[{"xaxis.range":[start,end]}]
     ))
 
-# -------------------------
-# Layout
-# -------------------------
 fig.update_layout(
 
     title="Glucose vs Selected Attribute",
@@ -187,7 +172,6 @@ fig.update_layout(
     xaxis=dict(
         title="Timestamp",
         type="date",
-        range=[start,end],
 
         rangeselector=dict(
             buttons=[
