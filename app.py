@@ -1,13 +1,21 @@
 import pandas as pd
 import plotly.graph_objects as go
+import streamlit as st
 
-# LOAD DATASET
-df = pd.read_pickle("patient_591.pkl")
+
+@st.cache_data
+def load_data():
+    df = pd.read_pickle("patient_591.pkl")
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    return df
+
+
+# load dataset only once
+df = load_data()
 
 patient_id = "591"
 
 pdf = df[df["patient_id"] == patient_id].copy()
-pdf["timestamp"] = pd.to_datetime(pdf["timestamp"])
 
 continuous_attrs = [
     "basis_heart_rate",
