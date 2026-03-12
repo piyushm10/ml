@@ -11,7 +11,17 @@ st.title("CGM Glucose Visualization (Patient 559)")
 df = pd.read_pickle("patient_559.pkl")
 df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-pdf = df.copy()
+# -------------------------
+# Date selector
+# -------------------------
+available_dates = sorted(df["timestamp"].dt.date.unique())
+
+selected_date = st.selectbox(
+    "Select Date",
+    available_dates
+)
+
+pdf = df[df["timestamp"].dt.date == selected_date].copy()
 
 # -------------------------
 # Feature lists
@@ -151,12 +161,11 @@ for event, color in event_colors.items():
 # -------------------------
 fig.update_layout(
 
-    title="Glucose Visualization",
+    title=f"Glucose Visualization — {selected_date}",
 
     xaxis=dict(
         title="Timestamp",
         type="date",
-
         rangeslider=dict(visible=True),
 
         rangeselector=dict(
