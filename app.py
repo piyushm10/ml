@@ -1,5 +1,9 @@
+import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+
+# load dataset
+df = pd.read_pickle("patient_591.pkl")   # change filename if needed
 
 patient_id = "591"
 
@@ -11,7 +15,7 @@ pdf["timestamp"] = pd.to_datetime(pdf["timestamp"])
 # -------------------------
 unique_dates = sorted(pdf["timestamp"].dt.date.unique())
 
-selected_date = unique_dates[0]   # default date
+selected_date = unique_dates[0]
 
 start = pd.Timestamp(selected_date)
 end = start + pd.Timedelta(days=1)
@@ -54,9 +58,6 @@ pdf["glucose_level"] = pd.to_numeric(pdf["glucose_level"], errors="coerce")
 for attr in continuous_attrs:
     pdf[attr] = pd.to_numeric(pdf[attr], errors="coerce")
 
-# -------------------------
-# Plot
-# -------------------------
 fig = go.Figure()
 
 # Glucose trace
@@ -85,14 +86,12 @@ for attr in continuous_attrs:
 
 buttons = []
 
-# NONE option
 buttons.append(dict(
     label="None",
     method="update",
     args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": [],"annotations":[]}]
 ))
 
-# Continuous dropdown
 for i, attr in enumerate(continuous_attrs):
 
     vis = [True] + [False]*len(continuous_attrs)
@@ -104,7 +103,6 @@ for i, attr in enumerate(continuous_attrs):
         args=[{"visible": vis}, {"shapes": [],"annotations":[]}]
     ))
 
-# Event dropdown
 for event in event_attrs:
 
     shapes = []
@@ -163,7 +161,6 @@ for event in event_attrs:
         args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": shapes,"annotations":annotations}]
     ))
 
-# Date dropdown
 date_buttons = []
 
 for d in unique_dates:
@@ -177,9 +174,6 @@ for d in unique_dates:
         args=[{"xaxis.range":[start,end]}]
     ))
 
-# -------------------------
-# Layout
-# -------------------------
 fig.update_layout(
 
     title="Glucose vs Selected Attribute",
@@ -236,4 +230,4 @@ fig.update_layout(
     height=650
 )
 
-fig.show()
+st.plotly_chart(fig, use_container_width=True)
