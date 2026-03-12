@@ -1,33 +1,11 @@
-import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-st.set_page_config(layout="wide")
-st.title("CGM Glucose Visualization (Patient 559)")
+patient_id = "591"
 
-# -------------------------
-# Load dataset
-# -------------------------
-df = pd.read_pickle("patient_559.pkl")
-df["timestamp"] = pd.to_datetime(df["timestamp"])
-df_full = df.copy()
+pdf = df[df["patient_id"] == patient_id].copy()
+pdf["timestamp"] = pd.to_datetime(pdf["timestamp"])
 
-# -------------------------
-# Date selector
-# -------------------------
-available_dates = sorted(df_full["timestamp"].dt.date.unique())
-
-selected_date = st.selectbox(
-    "Select Date",
-    available_dates
-)
-
-start = pd.Timestamp(selected_date)
-end = start + pd.Timedelta(days=1)
-
-# -------------------------
-# Feature lists
-# -------------------------
 continuous_attrs = [
     "basis_heart_rate",
     "basis_steps",
@@ -47,98 +25,100 @@ event_attrs = [
     "temp_basal"
 ]
 
-# -------------------------
-# Colors
-# -------------------------
 event_colors = {
-    "meal_type": "red",
-    "exercise_intensity": "green",
-    "hypo_event": "purple",
-    "finger_stick": "orange",
-    "bolus_dose": "blue",
-    "basal": "brown",
-    "temp_basal": "pink"
+    "meal_type":"red",
+    "exercise_intensity":"green",
+    "hypo_event":"purple",
+    "finger_stick":"orange",
+    "bolus_dose":"blue",
+    "basal":"brown",
+    "temp_basal":"pink"
 }
 
-feature_colors = [
-    "#ff7f0e","#2ca02c","#d62728","#9467bd",
-    "#8c564b","#e377c2","#7f7f7f","#bcbd22","#17becf"
-]
-
-# -------------------------
-# Feature selection
-# -------------------------
-selected_features = st.multiselect(
-    "Select Continuous Features",
-    continuous_attrs
-)
-
-selected_events = st.multiselect(
-    "Select Event Markers",
-    event_attrs
-)
-
-# numeric conversion
-df_full["glucose_level"] = pd.to_numeric(df_full["glucose_level"], errors="coerce")
+# ensure numeric columns
+pdf["glucose_level"] = pd.to_numeric(pdf["glucose_level"], errors="coerce")
 
 for attr in continuous_attrs:
-    df_full[attr] = pd.to_numeric(df_full[attr], errors="coerce")
+    pdf[attr] = pd.to_numeric(pdf[attr], errors="coerce")
 
-# -------------------------
-# Plot
-# -------------------------
 fig = go.Figure()
 
-# glucose line
+# Glucose trace
 fig.add_trace(go.Scatter(
-    x=df_full["timestamp"],
-    y=df_full["glucose_level"],
+    x=pdf["timestamp"],
+    y=pdf["glucose_level"],
     mode="lines",
+    connectgaps=True,
+    line=dict(width=3,color="#1f77b4"),
     name="Glucose",
-    line=dict(color="#1f77b4", width=3),
-    connectgaps=True
+    yaxis="y1"
 ))
 
-# continuous attributes
-for i, attr in enumerate(selected_features):
-
-    color = feature_colors[i % len(feature_colors)]
-
+# Continuous attributes
+for attr in continuous_attrs:
     fig.add_trace(go.Scatter(
-        x=df_full["timestamp"],
-        y=df_full[attr],
+        x=pdf["timestamp"],
+        y=pdf[attr],
         mode="lines",
+        connectgaps=True,
+        line=dict(width=2),
         name=attr,
-        line=dict(color=color, width=2),
+        visible=False,
         yaxis="y2"
     ))
 
-# -------------------------
-# Event markers
-# -------------------------
-shapes = []
-annotations = []
+buttons = []
 
-for event in selected_events:
+# NONE option
+buttons.append(dict(
+    label="None",
+    method="update",
+    args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": [],"annotations":[]}]
+))
 
-    events = df_full[df_full[event].notna()]
+# Continuous attribute dropdown
+for i, attr in enumerate(continuous_attrs):
+
+    vis = [True] + [False]*len(continuous_attrs)
+    vis[i+1] = True
+
+    buttons.append(dict(
+        label=attr,
+        method="update",
+        args=[{"visible": vis}, {"shapes": [],"annotations":[]}]
+    ))
+
+# Event dropdown
+for event in event_attrs:
+
+    shapes = []
+    annotations = []
+
+    events = pdf[pdf[event].notna()]
 
     for _, r in events.iterrows():
 
         if event == "meal_type":
             label = f"{r['meal_type']} ({r['meal_carbs']}g)"
+
         elif event == "bolus_dose":
             label = f"bolus {r['bolus_dose']}"
+
         elif event == "exercise_intensity":
             label = f"exercise {r['exercise_intensity']}"
+
         elif event == "finger_stick":
             label = f"finger {r['finger_stick']}"
+
         elif event == "basal":
             label = f"basal {r['basal']}"
+
         elif event == "temp_basal":
             label = f"temp basal {r['temp_basal']}"
+
         elif event == "hypo_event":
             label = "hypo"
+
         else:
             label = event
 
@@ -147,12 +127,8 @@ for event in selected_events:
             x0=r["timestamp"],
             x1=r["timestamp"],
             y0=0,
-            y1=400,
-            line=dict(
-                color=event_colors[event],
-                dash="dot",
-                width=2
-            )
+            y1=r["glucose_level"],
+            line=dict(color=event_colors[event], dash="dot", width=2)
         ))
 
         annotations.append(dict(
@@ -160,33 +136,39 @@ for event in selected_events:
             y=0,
             text=label,
             showarrow=False,
-            yshift=-15,
             textangle=90,
-            font=dict(size=10, color=event_colors[event])
+            yshift=-10,
+            font=dict(size=10,color=event_colors[event])
         ))
 
-# legend entries
-for event, color in event_colors.items():
-    if event in selected_events:
-        fig.add_trace(go.Scatter(
-            x=[None],
-            y=[None],
-            mode="lines",
-            line=dict(color=color, dash="dot", width=3),
-            name=event
-        ))
+    buttons.append(dict(
+        label=event,
+        method="update",
+        args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": shapes,"annotations":annotations}]
+    ))
 
-# -------------------------
-# Layout
-# -------------------------
+# Date dropdown
+unique_dates = sorted(pdf["timestamp"].dt.date.unique())
+
+date_buttons = []
+
+for d in unique_dates:
+    start = pd.Timestamp(d)
+    end = start + pd.Timedelta(days=1)
+
+    date_buttons.append(dict(
+        label=str(d),
+        method="relayout",
+        args=[{"xaxis.range":[start,end]}]
+    ))
+
 fig.update_layout(
 
-    title=f"Glucose Visualization — {selected_date}",
+    title="Glucose vs Selected Attribute",
 
     xaxis=dict(
         title="Timestamp",
         type="date",
-        range=[start, end],
 
         rangeselector=dict(
             buttons=[
@@ -195,14 +177,17 @@ fig.update_layout(
                 dict(count=12, label="12h", step="hour", stepmode="backward"),
                 dict(count=1, label="1d", step="day", stepmode="backward"),
                 dict(count=7, label="7d", step="day", stepmode="backward"),
-                dict(step="all", label="Full Range")
+                dict(step="all")
             ]
-        )
+        ),
+
+        rangeslider=dict(visible=True)
     ),
 
     yaxis=dict(
         title="Glucose (mg/dL)",
-        range=[0,400]
+        range=[0,400],
+        type="linear"
     ),
 
     yaxis2=dict(
@@ -212,11 +197,25 @@ fig.update_layout(
         showgrid=False
     ),
 
-    shapes=shapes,
-    annotations=annotations,
+    updatemenus=[
+        dict(
+            buttons=buttons,
+            direction="down",
+            showactive=True,
+            x=1.15,
+            y=1
+        ),
+        dict(
+            buttons=date_buttons,
+            direction="down",
+            showactive=True,
+            x=0.35,
+            y=1.15
+        )
+    ],
 
     template="plotly_white",
-    height=750
+    height=650
 )
 
-st.plotly_chart(fig, use_container_width=True)
+fig.show()
