@@ -1,4 +1,4 @@
-import streamlit as st
+]import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -11,8 +11,6 @@ st.title("CGM Glucose Visualization (Patient 559)")
 df = pd.read_pickle("patient_559.pkl")
 df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-df_full = df.copy()
-
 # -------------------------
 # Date selector
 # -------------------------
@@ -23,7 +21,8 @@ selected_date = st.selectbox(
     available_dates
 )
 
-pdf = df[df["timestamp"].dt.date == selected_date].copy()
+start = pd.Timestamp(selected_date)
+end = start + pd.Timedelta(days=1)
 
 # -------------------------
 # Feature lists
@@ -78,34 +77,21 @@ selected_events = st.multiselect(
     event_attrs
 )
 
-# -------------------------
-# Ensure numeric
-# -------------------------
-df_full["glucose_level"] = pd.to_numeric(df_full["glucose_level"], errors="coerce")
-pdf["glucose_level"] = pd.to_numeric(pdf["glucose_level"], errors="coerce")
+# numeric conversion
+df["glucose_level"] = pd.to_numeric(df["glucose_level"], errors="coerce")
 
 for attr in continuous_attrs:
-    pdf[attr] = pd.to_numeric(pdf[attr], errors="coerce")
+    df[attr] = pd.to_numeric(df[attr], errors="coerce")
 
 # -------------------------
 # Plot
 # -------------------------
 fig = go.Figure()
 
-# full glucose trace for bottom slider
+# full glucose trace
 fig.add_trace(go.Scatter(
-    x=df_full["timestamp"],
-    y=df_full["glucose_level"],
-    mode="lines",
-    line=dict(color="#1f77b4", width=1),
-    connectgaps=True,
-    showlegend=False
-))
-
-# main glucose trace
-fig.add_trace(go.Scatter(
-    x=pdf["timestamp"],
-    y=pdf["glucose_level"],
+    x=df["timestamp"],
+    y=df["glucose_level"],
     mode="lines",
     name="Glucose",
     line=dict(color="#1f77b4", width=3),
@@ -118,8 +104,8 @@ for i, attr in enumerate(selected_features):
     color = feature_colors[i % len(feature_colors)]
 
     fig.add_trace(go.Scatter(
-        x=pdf["timestamp"],
-        y=pdf[attr],
+        x=df["timestamp"],
+        y=df[attr],
         mode="lines",
         name=attr,
         line=dict(color=color, width=2),
@@ -127,18 +113,17 @@ for i, attr in enumerate(selected_features):
     ))
 
 # -------------------------
-# Event markers
+# Event markers across FULL dataset
 # -------------------------
 shapes = []
 annotations = []
 
 for event in selected_events:
 
-    events = pdf[pdf[event].notna()]
+    events = df[df[event].notna()]
 
     for _, r in events.iterrows():
 
-        # label text
         if event == "meal_type":
             label = f"{r['meal_type']} ({r['meal_carbs']}g)"
 
@@ -163,7 +148,6 @@ for event in selected_events:
         else:
             label = event
 
-        # vertical dotted line
         shapes.append(dict(
             type="line",
             x0=r["timestamp"],
@@ -177,7 +161,6 @@ for event in selected_events:
             )
         ))
 
-        # bottom annotation
         annotations.append(dict(
             x=r["timestamp"],
             y=0,
@@ -209,6 +192,7 @@ fig.update_layout(
     xaxis=dict(
         title="Timestamp",
         type="date",
+        range=[start, end],   # zoom main graph to selected day
 
         rangeslider=dict(visible=True),
 
