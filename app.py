@@ -3,21 +3,15 @@ import pandas as pd
 import plotly.graph_objects as go
 
 st.set_page_config(layout="wide")
-st.title("CGM Glucose Visualization")
+st.title("CGM Glucose Visualization (Patient 559)")
 
 # -------------------------
 # Load dataset
 # -------------------------
-df = pd.read_pickle("patient_563.pkl")
+df = pd.read_pickle("patient_559.pkl")
 df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-# -------------------------
-# Patient dropdown
-# -------------------------
-patients = sorted(df["patient_id"].unique())
-patient_id = st.selectbox("Select Patient", patients)
-
-pdf = df[df["patient_id"] == patient_id].copy()
+pdf = df.copy()
 
 # -------------------------
 # Feature lists
@@ -55,9 +49,8 @@ event_colors = {
 }
 
 feature_colors = [
-    "#1f77b4","#ff7f0e","#2ca02c","#d62728",
-    "#9467bd","#8c564b","#e377c2","#7f7f7f",
-    "#bcbd22","#17becf"
+    "#ff7f0e","#2ca02c","#d62728","#9467bd",
+    "#8c564b","#e377c2","#7f7f7f","#bcbd22","#17becf"
 ]
 
 # -------------------------
@@ -84,13 +77,14 @@ for attr in continuous_attrs:
 # -------------------------
 fig = go.Figure()
 
-# Main glucose line
+# Glucose line
 fig.add_trace(go.Scatter(
     x=pdf["timestamp"],
     y=pdf["glucose_level"],
     mode="lines",
     name="Glucose",
-    line=dict(color="#1f77b4", width=3)
+    line=dict(color="#1f77b4", width=3),
+    connectgaps=True
 ))
 
 # Continuous attributes
@@ -137,7 +131,7 @@ for event in selected_events:
             y=0,
             text=event,
             showarrow=False,
-            yshift=-10,
+            yshift=-12,
             font=dict(size=10, color=event_colors[event])
         ))
 
@@ -157,7 +151,7 @@ for event, color in event_colors.items():
 # -------------------------
 fig.update_layout(
 
-    title=f"Glucose Visualization (Patient {patient_id})",
+    title="Glucose Visualization",
 
     xaxis=dict(
         title="Timestamp",
