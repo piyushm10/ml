@@ -20,14 +20,6 @@ patient_id = st.selectbox("Select Patient", patients)
 pdf = df[df["patient_id"] == patient_id].copy()
 
 # -------------------------
-# Date selector
-# -------------------------
-available_dates = sorted(pdf["timestamp"].dt.date.unique())
-selected_date = st.selectbox("Select Date", available_dates)
-
-pdf = pdf[pdf["timestamp"].dt.date == selected_date]
-
-# -------------------------
 # Feature lists
 # -------------------------
 continuous_attrs = [
@@ -50,7 +42,7 @@ event_attrs = [
 ]
 
 # -------------------------
-# Event colors
+# Colors
 # -------------------------
 event_colors = {
     "meal_type": "red",
@@ -61,6 +53,12 @@ event_colors = {
     "basal": "brown",
     "temp_basal": "pink"
 }
+
+feature_colors = [
+    "#1f77b4","#ff7f0e","#2ca02c","#d62728",
+    "#9467bd","#8c564b","#e377c2","#7f7f7f",
+    "#bcbd22","#17becf"
+]
 
 # -------------------------
 # Feature selection
@@ -75,34 +73,24 @@ selected_events = st.multiselect(
     event_attrs
 )
 
-# ensure numeric columns
+# ensure numeric
 pdf["glucose_level"] = pd.to_numeric(pdf["glucose_level"], errors="coerce")
 
 for attr in continuous_attrs:
     pdf[attr] = pd.to_numeric(pdf[attr], errors="coerce")
 
 # -------------------------
-# Attribute color palette
-# -------------------------
-feature_colors = [
-    "#1f77b4","#ff7f0e","#2ca02c","#d62728",
-    "#9467bd","#8c564b","#e377c2","#7f7f7f",
-    "#bcbd22","#17becf"
-]
-
-# -------------------------
 # Plot
 # -------------------------
 fig = go.Figure()
 
-# Glucose line
+# Main glucose line
 fig.add_trace(go.Scatter(
     x=pdf["timestamp"],
     y=pdf["glucose_level"],
-    mode="lines+markers",
+    mode="lines",
     name="Glucose",
-    line=dict(width=3, color="black"),
-    marker=dict(size=4)
+    line=dict(color="#1f77b4", width=3)
 ))
 
 # Continuous attributes
@@ -113,31 +101,56 @@ for i, attr in enumerate(selected_features):
     fig.add_trace(go.Scatter(
         x=pdf["timestamp"],
         y=pdf[attr],
-        mode="lines+markers",
+        mode="lines",
         name=attr,
-        line=dict(width=2, color=color),
-        marker=dict(size=4, color=color),
+        line=dict(color=color, width=2),
         yaxis="y2"
     ))
 
 # -------------------------
-# Event markers ON glucose curve
+# Event vertical lines
 # -------------------------
+shapes = []
+annotations = []
+
 for event in selected_events:
 
     events = pdf[pdf[event].notna()]
 
-    fig.add_trace(go.Scatter(
-        x=events["timestamp"],
-        y=events["glucose_level"],
-        mode="markers",
-        name=event,
-        marker=dict(
-            size=12,
-            color=event_colors[event],
-            symbol="diamond"
-        )
-    ))
+    for _, r in events.iterrows():
+
+        shapes.append(dict(
+            type="line",
+            x0=r["timestamp"],
+            x1=r["timestamp"],
+            y0=0,
+            y1=400,
+            line=dict(
+                color=event_colors[event],
+                dash="dot",
+                width=2
+            )
+        ))
+
+        annotations.append(dict(
+            x=r["timestamp"],
+            y=0,
+            text=event,
+            showarrow=False,
+            yshift=-10,
+            font=dict(size=10, color=event_colors[event])
+        ))
+
+# Legend entries for events
+for event, color in event_colors.items():
+    if event in selected_events:
+        fig.add_trace(go.Scatter(
+            x=[None],
+            y=[None],
+            mode="lines",
+            line=dict(color=color, dash="dot", width=3),
+            name=event
+        ))
 
 # -------------------------
 # Layout
@@ -148,7 +161,20 @@ fig.update_layout(
 
     xaxis=dict(
         title="Timestamp",
-        type="date"
+        type="date",
+
+        rangeslider=dict(visible=True),
+
+        rangeselector=dict(
+            buttons=[
+                dict(count=1, label="1h", step="hour", stepmode="backward"),
+                dict(count=6, label="6h", step="hour", stepmode="backward"),
+                dict(count=12, label="12h", step="hour", stepmode="backward"),
+                dict(count=1, label="1d", step="day", stepmode="backward"),
+                dict(count=7, label="7d", step="day", stepmode="backward"),
+                dict(step="all")
+            ]
+        )
     ),
 
     yaxis=dict(
@@ -163,8 +189,11 @@ fig.update_layout(
         showgrid=False
     ),
 
+    shapes=shapes,
+    annotations=annotations,
+
     template="plotly_white",
-    height=700
+    height=750
 )
 
 st.plotly_chart(fig, use_container_width=True)
