@@ -11,6 +11,8 @@ st.title("CGM Glucose Visualization (Patient 559)")
 df = pd.read_pickle("patient_559.pkl")
 df["timestamp"] = pd.to_datetime(df["timestamp"])
 
+df_full = df.copy()
+
 # -------------------------
 # Date selector
 # -------------------------
@@ -76,7 +78,10 @@ selected_events = st.multiselect(
     event_attrs
 )
 
-# ensure numeric
+# -------------------------
+# Ensure numeric
+# -------------------------
+df_full["glucose_level"] = pd.to_numeric(df_full["glucose_level"], errors="coerce")
 pdf["glucose_level"] = pd.to_numeric(pdf["glucose_level"], errors="coerce")
 
 for attr in continuous_attrs:
@@ -87,7 +92,17 @@ for attr in continuous_attrs:
 # -------------------------
 fig = go.Figure()
 
-# Glucose line
+# full glucose trace for bottom slider
+fig.add_trace(go.Scatter(
+    x=df_full["timestamp"],
+    y=df_full["glucose_level"],
+    mode="lines",
+    line=dict(color="#1f77b4", width=1),
+    connectgaps=True,
+    showlegend=False
+))
+
+# main glucose trace
 fig.add_trace(go.Scatter(
     x=pdf["timestamp"],
     y=pdf["glucose_level"],
@@ -97,7 +112,7 @@ fig.add_trace(go.Scatter(
     connectgaps=True
 ))
 
-# Continuous attributes
+# continuous attributes
 for i, attr in enumerate(selected_features):
 
     color = feature_colors[i % len(feature_colors)]
@@ -112,7 +127,7 @@ for i, attr in enumerate(selected_features):
     ))
 
 # -------------------------
-# Event vertical lines
+# Event markers
 # -------------------------
 shapes = []
 annotations = []
@@ -123,6 +138,32 @@ for event in selected_events:
 
     for _, r in events.iterrows():
 
+        # label text
+        if event == "meal_type":
+            label = f"{r['meal_type']} ({r['meal_carbs']}g)"
+
+        elif event == "bolus_dose":
+            label = f"bolus {r['bolus_dose']}"
+
+        elif event == "exercise_intensity":
+            label = f"exercise {r['exercise_intensity']}"
+
+        elif event == "finger_stick":
+            label = f"finger {r['finger_stick']}"
+
+        elif event == "basal":
+            label = f"basal {r['basal']}"
+
+        elif event == "temp_basal":
+            label = f"temp basal {r['temp_basal']}"
+
+        elif event == "hypo_event":
+            label = "hypo"
+
+        else:
+            label = event
+
+        # vertical dotted line
         shapes.append(dict(
             type="line",
             x0=r["timestamp"],
@@ -136,16 +177,18 @@ for event in selected_events:
             )
         ))
 
+        # bottom annotation
         annotations.append(dict(
             x=r["timestamp"],
             y=0,
-            text=event,
+            text=label,
             showarrow=False,
-            yshift=-12,
+            yshift=-15,
+            textangle=90,
             font=dict(size=10, color=event_colors[event])
         ))
 
-# Legend entries for events
+# legend entries
 for event, color in event_colors.items():
     if event in selected_events:
         fig.add_trace(go.Scatter(
@@ -166,6 +209,7 @@ fig.update_layout(
     xaxis=dict(
         title="Timestamp",
         type="date",
+
         rangeslider=dict(visible=True),
 
         rangeselector=dict(
