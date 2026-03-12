@@ -6,6 +6,19 @@ patient_id = "591"
 pdf = df[df["patient_id"] == patient_id].copy()
 pdf["timestamp"] = pd.to_datetime(pdf["timestamp"])
 
+# -------------------------
+# Date selector
+# -------------------------
+unique_dates = sorted(pdf["timestamp"].dt.date.unique())
+
+selected_date = unique_dates[0]   # default date
+
+start = pd.Timestamp(selected_date)
+end = start + pd.Timedelta(days=1)
+
+# -------------------------
+# Attributes
+# -------------------------
 continuous_attrs = [
     "basis_heart_rate",
     "basis_steps",
@@ -35,12 +48,15 @@ event_colors = {
     "temp_basal":"pink"
 }
 
-# ensure numeric columns
+# ensure numeric
 pdf["glucose_level"] = pd.to_numeric(pdf["glucose_level"], errors="coerce")
 
 for attr in continuous_attrs:
     pdf[attr] = pd.to_numeric(pdf[attr], errors="coerce")
 
+# -------------------------
+# Plot
+# -------------------------
 fig = go.Figure()
 
 # Glucose trace
@@ -76,7 +92,7 @@ buttons.append(dict(
     args=[{"visible":[True]+[False]*len(continuous_attrs)}, {"shapes": [],"annotations":[]}]
 ))
 
-# Continuous attribute dropdown
+# Continuous dropdown
 for i, attr in enumerate(continuous_attrs):
 
     vis = [True] + [False]*len(continuous_attrs)
@@ -148,11 +164,10 @@ for event in event_attrs:
     ))
 
 # Date dropdown
-unique_dates = sorted(pdf["timestamp"].dt.date.unique())
-
 date_buttons = []
 
 for d in unique_dates:
+
     start = pd.Timestamp(d)
     end = start + pd.Timedelta(days=1)
 
@@ -162,6 +177,9 @@ for d in unique_dates:
         args=[{"xaxis.range":[start,end]}]
     ))
 
+# -------------------------
+# Layout
+# -------------------------
 fig.update_layout(
 
     title="Glucose vs Selected Attribute",
@@ -169,6 +187,7 @@ fig.update_layout(
     xaxis=dict(
         title="Timestamp",
         type="date",
+        range=[start,end],
 
         rangeselector=dict(
             buttons=[
@@ -186,8 +205,7 @@ fig.update_layout(
 
     yaxis=dict(
         title="Glucose (mg/dL)",
-        range=[0,400],
-        type="linear"
+        range=[0,400]
     ),
 
     yaxis2=dict(
