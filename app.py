@@ -10,7 +10,6 @@ st.title("CGM Glucose Visualization (Patient 559)")
 # -------------------------
 df = pd.read_pickle("patient_559.pkl")
 df["timestamp"] = pd.to_datetime(df["timestamp"])
-
 df_full = df.copy()
 
 # -------------------------
@@ -25,8 +24,6 @@ selected_date = st.selectbox(
 
 start = pd.Timestamp(selected_date)
 end = start + pd.Timedelta(days=1)
-
-pdf = df_full[(df_full["timestamp"] >= start) & (df_full["timestamp"] < end)]
 
 # -------------------------
 # Feature lists
@@ -92,27 +89,17 @@ for attr in continuous_attrs:
 # -------------------------
 fig = go.Figure()
 
-# 1️⃣ FULL DATASET GLUCOSE (for slider only)
+# glucose line
 fig.add_trace(go.Scatter(
     x=df_full["timestamp"],
     y=df_full["glucose_level"],
-    mode="lines",
-    line=dict(color="#1f77b4", width=1),
-    connectgaps=True,
-    showlegend=False
-))
-
-# 2️⃣ MAIN GLUCOSE (DATE FILTERED)
-fig.add_trace(go.Scatter(
-    x=pdf["timestamp"],
-    y=pdf["glucose_level"],
     mode="lines",
     name="Glucose",
     line=dict(color="#1f77b4", width=3),
     connectgaps=True
 ))
 
-# continuous attributes (FULL DATASET)
+# continuous attributes
 for i, attr in enumerate(selected_features):
 
     color = feature_colors[i % len(feature_colors)]
@@ -127,7 +114,7 @@ for i, attr in enumerate(selected_features):
     ))
 
 # -------------------------
-# Event markers (FULL DATASET)
+# Event markers
 # -------------------------
 shapes = []
 annotations = []
@@ -161,7 +148,11 @@ for event in selected_events:
             x1=r["timestamp"],
             y0=0,
             y1=400,
-            line=dict(color=event_colors[event], dash="dot", width=2)
+            line=dict(
+                color=event_colors[event],
+                dash="dot",
+                width=2
+            )
         ))
 
         annotations.append(dict(
@@ -196,7 +187,6 @@ fig.update_layout(
         title="Timestamp",
         type="date",
         range=[start, end],
-        rangeslider=dict(visible=True),
 
         rangeselector=dict(
             buttons=[
@@ -205,7 +195,7 @@ fig.update_layout(
                 dict(count=12, label="12h", step="hour", stepmode="backward"),
                 dict(count=1, label="1d", step="day", stepmode="backward"),
                 dict(count=7, label="7d", step="day", stepmode="backward"),
-                dict(step="all")
+                dict(step="all", label="Full Range")
             ]
         )
     ),
